@@ -21,6 +21,7 @@ import Thermostat from '../components/Thermostat'
 const styles = (theme) => ({
   main: {
     fontFamily: 'Roboto',
+    '-webkit-overflow-scrolling': 'touch',
   },
   list: {
     padding: 10,
@@ -29,7 +30,7 @@ const styles = (theme) => ({
     // display: 'block',
   },
   item: {
-    display: 'inline-block',
+    marginRight: 2,
   },
   addButton: {
     position: 'absolute',
@@ -80,6 +81,8 @@ class Index extends React.Component {
     return {}
   }
 
+  state = {}
+
   render() {
     const { classes } = this.props
     const thermostats = [
@@ -87,9 +90,15 @@ class Index extends React.Component {
       ['Bath', 28],
       ['Main room', 25],
     ].map(([name, temp]) => (
-      <Grid key={name} item className={classes.item}>
-        <Thermostat name={name} temp={temp} leaf />
-      </Grid>
+      <div className={classes.item}>
+        <Thermostat
+          name={name}
+          temp={temp}
+          leaf
+          active={this.state.active === name}
+          onClick={() => this.setState({ active: name })}
+        />
+      </div>
     ))
 
     const thermostatsPlanned = [
@@ -100,7 +109,7 @@ class Index extends React.Component {
       ['10:00', 25.5],
       ['18:00', 28],
     ].map(([name, temp]) => (
-      <div style={{ marginTop: 5 }}>
+      <div style={{ marginTop: 15 }}>
         <Thermostat name={name} temp={temp} paper small />
       </div>
     ))

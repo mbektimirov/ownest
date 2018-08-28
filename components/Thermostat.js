@@ -2,6 +2,7 @@ import React from 'react'
 
 // material
 import Paper from '@material-ui/core/Paper'
+import Button from '@material-ui/core/Button'
 
 // libs
 import { withStyles } from '@material-ui/core/styles'
@@ -26,6 +27,10 @@ const styles = {
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  activeWrapper: {
+    background: '#3f51b5',
+    borderRadius: '100%',
   },
   classic: {
     ...thermostat,
@@ -56,22 +61,36 @@ const styles = {
   name: {
     color: '#cecece',
     fontSize: 12,
+    marginTop: 3,
   },
 }
 
-const Thermostat = ({ temp, name, leaf, paper, small, classes }) => {
-  const Component = paper ? Paper : 'div'
+const Thermostat = ({
+  temp,
+  name,
+  leaf,
+  paper,
+  small,
+  active,
+  classes,
+  ...props
+}) => {
+  const Component = paper
+    ? Paper // ({ children }) => <Button variant="fab">{children}</Button>
+    : 'div'
 
   return (
-    <div className={classes.wrapper}>
-      <Component
-        className={cx(paper ? classes.paper : classes.classic, {
-          [classes.small]: small,
-        })}
-      >
-        <div>{temp}</div>
-        {leaf && <div className={classes.leaf} />}
-      </Component>
+    <div className={classes.wrapper} {...props}>
+      <div className={cx({ [classes.activeWrapper]: active })}>
+        <Component
+          className={cx(paper ? classes.paper : classes.classic, {
+            [classes.small]: small,
+          })}
+        >
+          <div>{temp}</div>
+          {leaf && <div className={classes.leaf} />}
+        </Component>
+      </div>
       <div className={classes.name}>{name}</div>
     </div>
   )
