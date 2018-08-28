@@ -17,6 +17,7 @@ import AddIcon from '@material-ui/icons/Add'
 
 // components
 import Thermostat from '../components/Thermostat'
+import EditDialog from '../components/EditDialog'
 
 const styles = (theme) => ({
   main: {
@@ -146,6 +147,7 @@ class Index extends React.Component {
         >
           <AddIcon />
         </Button>
+        <EditDialog />
       </div>
     )
   }

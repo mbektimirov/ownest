@@ -8,8 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
-    "@material-ui/core": "^1.5.1",
-    "@material-ui/icons": "^2.0.3",
+    "@material-ui/core": "^3.0.0",
+    "@material-ui/icons": "^3.0.0",
     "@zeit/next-sass": "^0.2.0",
     "body-parser": "^1.18.3",
     "classnames": "^2.2.6",
@@ -30,6 +30,9 @@
     "react-dom": "^16.0.0",
     "react-jss": "^8.6.1",
     "react-redux": "5.0.7",
+    "react-rotary-knob": "^1.1.1",
+    "react-rotary-knob-skin-pack": "^1.0.2",
+    "react-swipeable-views": "^0.12.16",
     "redux": "4.0.0",
     "redux-saga": "0.16.0",
     "styled-jsx": "^3.0.2",
