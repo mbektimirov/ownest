@@ -40,16 +40,7 @@ const steps = [
 
 class AlertDialogSlide extends React.Component {
   state = {
-    open: true,
     activeStep: 0,
-  }
-
-  handleClickOpen = () => {
-    this.setState({ open: true })
-  }
-
-  handleClose = () => {
-    this.setState({ open: false })
   }
 
   handleNext = () => {
@@ -69,22 +60,21 @@ class AlertDialogSlide extends React.Component {
   }
 
   render() {
-    const { classes } = this.props
+    const { classes, open } = this.props
     const { activeStep } = this.state
     const maxSteps = steps.length
 
     return (
       <div>
         <Dialog
-          open={this.state.open}
+          open={open}
           TransitionComponent={Transition}
           keepMounted
-          onClose={this.handleClose}
+          onClose={this.props.onClose}
           fullWidth
         >
           <DialogContent>
             <SwipeableViews
-              // axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
               index={this.state.activeStep}
               onChangeIndex={this.handleStepChange}
               enableMouseEvents

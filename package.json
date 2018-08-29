@@ -10,6 +10,7 @@
   "dependencies": {
     "@material-ui/core": "^3.0.0",
     "@material-ui/icons": "^3.0.0",
+    "@zeit/next-css": "^0.2.0",
     "@zeit/next-sass": "^0.2.0",
     "body-parser": "^1.18.3",
     "classnames": "^2.2.6",
@@ -21,7 +22,6 @@
     "next": "latest",
     "next-redux-saga": "3.0.0-beta.1",
     "next-redux-wrapper": "2.0.0-beta.6",
-    "node-sass": "^4.9.3",
     "nprogress": "^0.2.0",
     "passport": "^0.4.0",
     "passport-nest": "^1.0.0",

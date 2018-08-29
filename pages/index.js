@@ -5,12 +5,15 @@ import React from 'react'
 import Cookies from 'universal-cookie'
 import Router from 'next/router'
 import { withStyles } from '@material-ui/core/styles'
+import cx from 'classnames'
+import get from 'lodash/get'
 
 // material
-import Paper from '@material-ui/core/Paper'
 import Grid from '@material-ui/core/Grid'
-import Divider from '@material-ui/core/Divider'
 import Button from '@material-ui/core/Button'
+import Paper from '@material-ui/core/Paper'
+import IconButton from '@material-ui/core/IconButton'
+import DeleteIcon from '@material-ui/icons/Delete'
 
 // icons
 import AddIcon from '@material-ui/icons/Add'
@@ -19,19 +22,25 @@ import AddIcon from '@material-ui/icons/Add'
 import Thermostat from '../components/Thermostat'
 import EditDialog from '../components/EditDialog'
 
+// styles
+import 'nprogress/nprogress.css'
+
+import Api from '../src/api'
+
 const styles = (theme) => ({
   main: {
     fontFamily: 'Roboto',
     '-webkit-overflow-scrolling': 'touch',
+    maxWidth: 800,
+    margin: '0 auto',
   },
   list: {
     padding: 10,
     overflowX: 'scroll',
     whiteSpace: 'nowrap',
-    // display: 'block',
   },
   item: {
-    marginRight: 2,
+    marginRight: 7,
   },
   addButton: {
     position: 'absolute',
@@ -41,7 +50,11 @@ const styles = (theme) => ({
   },
   listWrapper: {
     position: 'relative',
-    paddingLeft: 10,
+    margin: '12px',
+    padding: '0 10px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'start',
   },
   planList: {
     height: 100,
@@ -51,22 +64,52 @@ const styles = (theme) => ({
     width: '86%',
     overflowX: 'auto',
   },
-  addTimeRuleButton: {
+  planActions: {
     position: 'absolute',
-    left: 'calc(100% - 50px)',
+    left: 'calc(100% - 52px)',
     top: '50%',
     transform: 'translateY(-50%)',
+    display: 'flex',
+    alignItems: 'center',
+    flexDirection: 'column',
   },
-  paper: {
-    width: 60,
-    height: 60,
+  addTimeRuleButton: {},
+  weekDays: {
+    display: 'flex',
+    flexDirection: 'row',
+    color: 'white',
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  weekDay: {
+    width: 30,
+    height: 30,
+    color: 'white',
     borderRadius: '100%',
+    padding: 14,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 10,
+    fontWeight: 500,
+  },
+  weekDayActive: {
+    background: 'white',
+    color: 'black',
+  },
+  repeatTitle: {
+    color: 'white',
+    fontSize: 12,
   },
 })
 
+const getTemp = (thermostat) =>
+  thermostat.temperature_scale === 'F'
+    ? thermostat.ambient_temperature_f
+    : thermostat.ambient_temperature_c
+
 class Index extends React.Component {
-  static getInitialProps = ({ req, res }) => {
+  static getInitialProps = async ({ req, res }) => {
     const cookies = new Cookies()
     const token = req ? req.cookies.nest_token : cookies.get('nest_token')
 
@@ -77,30 +120,63 @@ class Index extends React.Component {
       } else {
         Router.push('/login')
       }
+
+      return {}
     }
 
-    return {}
+    const api = new Api('https://developer-api.nest.com', { token })
+    const rootResult = await api.get('/')
+    const { thermostats } = rootResult.devices
+
+    return {
+      api,
+      thermostats,
+      // keep ordered thermostats list to always set first of the items as active
+      thermostatsList: Object.values(thermostats || {}),
+    }
   }
 
-  state = {}
+  state = {
+    activeThId: get(this.props.thermostatsList, [0, 'device_id']),
+    plan: {},
+    newPlan: {},
+    editDialogOpen: false,
+  }
 
-  render() {
+  get thPlan() {}
+
+  get weekDays() {
     const { classes } = this.props
-    const thermostats = [
-      ['Basement', 23.5],
-      ['Bath', 28],
-      ['Main room', 25],
-    ].map(([name, temp]) => (
-      <div className={classes.item}>
-        <Thermostat
-          name={name}
-          temp={temp}
-          leaf
-          active={this.state.active === name}
-          onClick={() => this.setState({ active: name })}
-        />
+
+    return ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((weekDay) => (
+      <div className={cx(classes.weekDay /*classes.weekDayActive*/)}>
+        {weekDay}
       </div>
     ))
+  }
+
+  onPlanAdded(th, plans) {}
+
+  render() {
+    console.log('THERMOSTATS', this.props)
+
+    const { classes } = this.props
+    const thermostats = Object.values(this.props.thermostats).map((th) => {
+      const name = th.where_name
+      const temp = getTemp(th)
+
+      return (
+        <div className={classes.item} key={th.device_id}>
+          <Thermostat
+            name={name}
+            temp={temp}
+            leaf
+            active={this.state.activeThId === th.device_id}
+            onClick={() => this.setState({ activeThId: th.device_id })}
+          />
+        </div>
+      )
+    })
 
     const thermostatsPlanned = [
       ['7:30', 27],
@@ -109,33 +185,38 @@ class Index extends React.Component {
       ['7:30', 27],
       ['10:00', 25.5],
       ['18:00', 28],
-    ].map(([name, temp]) => (
-      <div style={{ marginTop: 15 }}>
-        <Thermostat name={name} temp={temp} paper small />
-      </div>
-    ))
+    ].map(([name, temp]) => <Thermostat name={name} temp={temp} paper small />)
 
     return (
       <div className={classes.main}>
         <Grid container className={classes.list} justify="center" spacing={0}>
           {thermostats}
         </Grid>
-        <Divider />
-
         <div>
-          {[0, 1, 2].map(() => (
-            <div className={classes.listWrapper}>
-              <div className={classes.planList}>{thermostatsPlanned}</div>
-              <Button
-                variant="fab"
-                mini
-                color="secondary"
-                aria-label="Add"
-                className={classes.addTimeRuleButton}
-              >
-                <AddIcon />
-              </Button>
-            </div>
+          {[0].map(() => (
+            <Paper className={classes.listWrapper}>
+              <div className={classes.planList}>
+                {thermostatsPlanned}{' '}
+                <div className={classes.planActions}>
+                  <Button
+                    variant="fab"
+                    mini
+                    color="secondary"
+                    aria-label="Add"
+                    className={classes.addTimeRuleButton}
+                  >
+                    <AddIcon />
+                  </Button>
+                  <IconButton className={classes.button} aria-label="Delete">
+                    <DeleteIcon />
+                  </IconButton>
+                </div>
+              </div>
+              <div>
+                <span className={classes.repeatTitle}>Repeat:</span>
+                <div className={classes.weekDays}>{this.weekDays}</div>
+              </div>
+            </Paper>
           ))}
         </div>
 
@@ -144,10 +225,14 @@ class Index extends React.Component {
           color="primary"
           aria-label="Add"
           className={classes.addButton}
+          onClick={() => this.setState({ editDialogOpen: true })}
         >
           <AddIcon />
         </Button>
-        <EditDialog />
+        <EditDialog
+          open={this.state.editDialogOpen}
+          onClose={() => this.setState({ editDialogOpen: false })}
+        />
       </div>
     )
   }

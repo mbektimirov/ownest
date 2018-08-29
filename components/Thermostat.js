@@ -2,7 +2,6 @@ import React from 'react'
 
 // material
 import Paper from '@material-ui/core/Paper'
-import Button from '@material-ui/core/Button'
 
 // libs
 import { withStyles } from '@material-ui/core/styles'
@@ -29,8 +28,12 @@ const styles = {
     alignItems: 'center',
   },
   activeWrapper: {
-    background: '#3f51b5',
+    background: '#444444',
+    transition: 'background-color 250ms linear',
     borderRadius: '100%',
+  },
+  active: {
+    background: '#9bce4f',
   },
   classic: {
     ...thermostat,
@@ -81,7 +84,7 @@ const Thermostat = ({
 
   return (
     <div className={classes.wrapper} {...props}>
-      <div className={cx({ [classes.activeWrapper]: active })}>
+      <div className={cx(classes.activeWrapper, { [classes.active]: active })}>
         <Component
           className={cx(paper ? classes.paper : classes.classic, {
             [classes.small]: small,
