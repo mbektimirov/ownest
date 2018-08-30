@@ -281,16 +281,18 @@ class Index extends React.Component {
           <AddIcon />
         </Button>
 
-        <EditDialog
-          open={this.state.editDialogOpen}
-          onClose={this.closeDialog}
-          onTimeAdd={({ time, temp }) => {
-            this.addTime(activeThId, activeListId, time, temp)
-            this.setState({ editDialogOpen: false })
-          }}
-          thermostat={this.state.activeTh}
-          times={times}
-        />
+        {this.state.editDialogOpen && (
+          <EditDialog
+            open={this.state.editDialogOpen}
+            onClose={this.closeDialog}
+            onTimeAdd={({ time, temp }) => {
+              this.addTime(activeThId, activeListId, time, temp)
+              this.setState({ editDialogOpen: false })
+            }}
+            thermostat={this.state.activeTh}
+            times={times}
+          />
+        )}
       </div>
     )
   }

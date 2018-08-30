@@ -143,7 +143,7 @@ class AlertDialogSlide extends React.Component {
                   onClick={this.handleNext}
                   disabled={activeStep === maxSteps - 1}
                 >
-                  {newTimes[activeStep + 1] && newTimes[activeStep + 1][0]}
+                  {newTimes[activeStep + 1] && newTimes[activeStep + 1].time}
                   <KeyboardArrowRight />
                 </Button>
               }
@@ -154,7 +154,7 @@ class AlertDialogSlide extends React.Component {
                   disabled={activeStep === 0}
                 >
                   <KeyboardArrowLeft />
-                  {newTimes[activeStep - 1] && newTimes[activeStep - 1][0]}
+                  {newTimes[activeStep - 1] && newTimes[activeStep - 1].time}
                 </Button>
               }
             />
