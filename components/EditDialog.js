@@ -94,7 +94,7 @@ class AlertDialogSlide extends React.Component {
                     max={35}
                     skin={s12}
                     preciseMode={false}
-                    style={{ width: 220, height: 220 }}
+                    style={{ width: 220, height: 220, marginTop: 15 }}
                     defaultValue={temp}
                   />
                 </div>

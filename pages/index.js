@@ -6,7 +6,11 @@ import Cookies from 'universal-cookie'
 import Router from 'next/router'
 import { withStyles } from '@material-ui/core/styles'
 import cx from 'classnames'
+import autobind from 'autobind-decorator'
 import get from 'lodash/get'
+import set from 'lodash/set'
+import values from 'lodash/values'
+import omitBy from 'lodash/omitBy'
 
 // material
 import Grid from '@material-ui/core/Grid'
@@ -26,6 +30,7 @@ import EditDialog from '../components/EditDialog'
 import 'nprogress/nprogress.css'
 
 import Api from '../src/api'
+import guid from '../src/guid'
 
 const styles = (theme) => ({
   main: {
@@ -155,12 +160,50 @@ class Index extends React.Component {
     ))
   }
 
-  onPlanAdded(th, plans) {}
+  addPlanList() {
+    const { activeThId, plan } = this.state
+    const thLists = plan[activeThId] || {}
+    const id = guid()
+
+    thLists[id] = {
+      id,
+      times: [],
+    }
+
+    this.setState({
+      editDialogOpen: true,
+      activeListId: id,
+      plan: { ...plan, [activeThId]: thLists },
+    })
+  }
+
+  @autobind
+  addTime(thId, listId, time, temp) {
+    const { plan } = this.state
+
+    set(plan, [thId, listId, 'times'], { time, temp })
+    this.setState({ plan })
+  }
+
+  @autobind
+  closeDialog() {
+    const { plan, activeThId, activeListId } = this.state
+    const list = get(plan, [activeThId, activeListId])
+
+    // drop the list if no times were added
+    if (list.times.length === 0) {
+      delete plan[activeThId][activeListId]
+    }
+
+    this.setState({ editDialogOpen: false, plan })
+  }
 
   render() {
     console.log('THERMOSTATS', this.props)
 
     const { classes } = this.props
+    const { activeThId } = this.state
+
     const thermostats = Object.values(this.props.thermostats).map((th) => {
       const name = th.where_name
       const temp = getTemp(th)
@@ -178,14 +221,7 @@ class Index extends React.Component {
       )
     })
 
-    const thermostatsPlanned = [
-      ['7:30', 27],
-      ['10:00', 25.5],
-      ['18:00', 28],
-      ['7:30', 27],
-      ['10:00', 25.5],
-      ['18:00', 28],
-    ].map(([name, temp]) => <Thermostat name={name} temp={temp} paper small />)
+    const plans = values(this.state.plan[activeThId] || {})
 
     return (
       <div className={classes.main}>
@@ -193,10 +229,12 @@ class Index extends React.Component {
           {thermostats}
         </Grid>
         <div>
-          {[0].map(() => (
+          {plans.map((plan) => (
             <Paper className={classes.listWrapper}>
               <div className={classes.planList}>
-                {thermostatsPlanned}{' '}
+                {plan.times.map(({ name, temp }) => (
+                  <Thermostat name={name} temp={temp} paper small />
+                ))}
                 <div className={classes.planActions}>
                   <Button
                     variant="fab"
@@ -225,13 +263,14 @@ class Index extends React.Component {
           color="primary"
           aria-label="Add"
           className={classes.addButton}
-          onClick={() => this.setState({ editDialogOpen: true })}
+          onClick={() => this.addPlanList()}
         >
           <AddIcon />
         </Button>
         <EditDialog
           open={this.state.editDialogOpen}
-          onClose={() => this.setState({ editDialogOpen: false })}
+          onClose={this.closeDialog}
+          onTimeAdd={this.addTime}
         />
       </div>
     )
