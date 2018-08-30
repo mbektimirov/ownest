@@ -142,6 +142,7 @@ class Index extends React.Component {
   }
 
   state = {
+    activeTh: get(this.props.thermostatsList, [0]),
     activeThId: get(this.props.thermostatsList, [0, 'device_id']),
     plan: {},
     newPlan: {},
@@ -160,7 +161,7 @@ class Index extends React.Component {
     ))
   }
 
-  addPlanList() {
+  addPlan() {
     const { activeThId, plan } = this.state
     const thLists = plan[activeThId] || {}
     const id = guid()
@@ -180,9 +181,16 @@ class Index extends React.Component {
   @autobind
   addTime(thId, listId, time, temp) {
     const { plan } = this.state
+    const times = get(plan, [thId, listId, 'times'], [])
+    const id = guid()
 
-    set(plan, [thId, listId, 'times'], { time, temp })
+    times.push({ id, time, temp })
+
     this.setState({ plan })
+  }
+
+  addTimeToPlan(listId) {
+    this.setState({ activeListId: listId, editDialogOpen: true })
   }
 
   @autobind
@@ -199,10 +207,11 @@ class Index extends React.Component {
   }
 
   render() {
+    console.log('STATE', this.state)
     console.log('THERMOSTATS', this.props)
 
     const { classes } = this.props
-    const { activeThId } = this.state
+    const { activeThId, activeListId } = this.state
 
     const thermostats = Object.values(this.props.thermostats).map((th) => {
       const name = th.where_name
@@ -215,13 +224,16 @@ class Index extends React.Component {
             temp={temp}
             leaf
             active={this.state.activeThId === th.device_id}
-            onClick={() => this.setState({ activeThId: th.device_id })}
+            onClick={() =>
+              this.setState({ activeThId: th.device_id, activeTh: th })
+            }
           />
         </div>
       )
     })
 
-    const plans = values(this.state.plan[activeThId] || {})
+    const plans = this.state.plan[activeThId] || {}
+    const times = get(plans, [activeListId, 'times'], [])
 
     return (
       <div className={classes.main}>
@@ -229,11 +241,11 @@ class Index extends React.Component {
           {thermostats}
         </Grid>
         <div>
-          {plans.map((plan) => (
+          {values(plans).map((plan) => (
             <Paper className={classes.listWrapper}>
               <div className={classes.planList}>
-                {plan.times.map(({ name, temp }) => (
-                  <Thermostat name={name} temp={temp} paper small />
+                {plan.times.map(({ time, temp }) => (
+                  <Thermostat name={time} temp={temp} paper small />
                 ))}
                 <div className={classes.planActions}>
                   <Button
@@ -242,6 +254,7 @@ class Index extends React.Component {
                     color="secondary"
                     aria-label="Add"
                     className={classes.addTimeRuleButton}
+                    onClick={() => this.addTimeToPlan(plan.id)}
                   >
                     <AddIcon />
                   </Button>
@@ -263,14 +276,20 @@ class Index extends React.Component {
           color="primary"
           aria-label="Add"
           className={classes.addButton}
-          onClick={() => this.addPlanList()}
+          onClick={() => this.addPlan()}
         >
           <AddIcon />
         </Button>
+
         <EditDialog
           open={this.state.editDialogOpen}
           onClose={this.closeDialog}
-          onTimeAdd={this.addTime}
+          onTimeAdd={({ time, temp }) => {
+            this.addTime(activeThId, activeListId, time, temp)
+            this.setState({ editDialogOpen: false })
+          }}
+          thermostat={this.state.activeTh}
+          times={times}
         />
       </div>
     )

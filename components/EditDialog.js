@@ -15,32 +15,42 @@ import TextField from '@material-ui/core/TextField'
 import { withStyles } from '@material-ui/core/styles'
 import { Knob } from 'react-rotary-knob'
 import s12 from './knob-s12'
+// import cx from 'classnames'
 
 const Transition = (props) => <Slide direction="up" {...props} />
 
 const styles = {
+  dialog: {
+    fontFamily: 'Roboto',
+    color: 'white',
+    textAlign: 'center',
+  },
+  title: {
+    color: '#cecece',
+    // fontSize: 12,
+    marginBottom: 10,
+  },
   slide: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     // marginTop: -10,
-    marginBottom: 15,
+    marginBottom: 6,
     flexDirection: 'column',
   },
+  actions: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
 }
-
-const steps = [
-  ['07:30', 27],
-  ['10:00', 25.5],
-  ['18:00', 28],
-  ['19:00', 27],
-  ['22:30', 25.5],
-  ['03:00', 28],
-]
 
 class AlertDialogSlide extends React.Component {
   state = {
     activeStep: 0,
+    newTime: '',
+    newTemp: 18,
   }
 
   handleNext = () => {
@@ -59,47 +69,70 @@ class AlertDialogSlide extends React.Component {
     this.setState({ activeStep })
   }
 
-  render() {
-    const { classes, open } = this.props
-    const { activeStep } = this.state
-    const maxSteps = steps.length
+  renderInputs({ time, temp, onTimeChange, onTempChange }) {
+    const { classes } = this.props
 
     return (
-      <div>
-        <Dialog
-          open={open}
-          TransitionComponent={Transition}
-          keepMounted
-          onClose={this.props.onClose}
-          fullWidth
-        >
-          <DialogContent>
-            <SwipeableViews
-              index={this.state.activeStep}
-              onChangeIndex={this.handleStepChange}
-              enableMouseEvents
-              style={{ width: '100%', height: '100%' }}
-            >
-              {steps.map(([time, temp]) => (
-                <div className={classes.slide}>
-                  <TextField
-                    type="time"
-                    value={time}
-                    inputProps={{
-                      step: 300, // 5 min
-                    }}
-                  />
-                  <Knob
-                    min={18}
-                    max={35}
-                    skin={s12}
-                    preciseMode={false}
-                    style={{ width: 220, height: 220, marginTop: 15 }}
-                    defaultValue={temp}
-                  />
-                </div>
-              ))}
-            </SwipeableViews>
+      <div className={classes.slide}>
+        <TextField
+          type="time"
+          value={time}
+          inputProps={{
+            step: 300, // 5 min
+          }}
+          onChange={onTimeChange}
+        />
+        <Knob
+          min={18}
+          max={35}
+          skin={s12}
+          preciseMode={false}
+          style={{ width: 220, height: 220, marginTop: 15 }}
+          defaultValue={temp}
+          onChange={onTempChange}
+        />
+      </div>
+    )
+  }
+
+  render() {
+    const { classes, open, thermostat, times, onTimeAdd, onClose } = this.props
+    const { activeStep, newTime, newTemp } = this.state
+    const newTimes = [...times, { time: newTime, temp: newTemp }]
+    const maxSteps = newTimes.length
+    const newInputHandlers = {
+      onTimeChange: (e) => this.setState({ newTime: e.target.value }),
+      onTempChange: (temp) => this.setState({ newTemp: Math.round(temp) }),
+    }
+
+    console.log('DIALOG STATE', this.state)
+
+    return (
+      <Dialog
+        className={classes.dialog}
+        open={open}
+        TransitionComponent={Transition}
+        onClose={this.props.onClose}
+        fullWidth
+      >
+        <DialogContent>
+          <div className={classes.title}>{thermostat.name}</div>
+          <SwipeableViews
+            index={this.state.activeStep}
+            onChangeIndex={this.handleStepChange}
+            enableMouseEvents
+            style={{ width: '100%', height: '100%' }}
+          >
+            {newTimes.map(({ id, time, temp }) =>
+              this.renderInputs({
+                time,
+                temp,
+                ...(id ? null : newInputHandlers),
+              })
+            )}
+          </SwipeableViews>
+
+          {newTimes.length > 0 && (
             <MobileStepper
               steps={maxSteps}
               position="static"
@@ -110,7 +143,7 @@ class AlertDialogSlide extends React.Component {
                   onClick={this.handleNext}
                   disabled={activeStep === maxSteps - 1}
                 >
-                  {steps[activeStep + 1] && steps[activeStep + 1][0]}
+                  {newTimes[activeStep + 1] && newTimes[activeStep + 1][0]}
                   <KeyboardArrowRight />
                 </Button>
               }
@@ -121,13 +154,24 @@ class AlertDialogSlide extends React.Component {
                   disabled={activeStep === 0}
                 >
                   <KeyboardArrowLeft />
-                  {steps[activeStep - 1] && steps[activeStep - 1][0]}
+                  {newTimes[activeStep - 1] && newTimes[activeStep - 1][0]}
                 </Button>
               }
             />
-          </DialogContent>
-        </Dialog>
-      </div>
+          )}
+
+          <div className={classes.actions}>
+            <Button
+              size="small"
+              onClick={() => onTimeAdd({ time: newTime, temp: newTemp })}
+            >
+              Save
+            </Button>
+            <Button size="small">Close</Button>
+            <Button size="small">Add more</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     )
   }
 }
