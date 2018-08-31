@@ -12,6 +12,8 @@ const dev = process.env.NODE_ENV !== 'production'
 const app = next({ dev })
 const handle = app.getRequestHandler()
 
+let savedPlan = {}
+
 app.prepare().then(() => {
   const server = express()
 
@@ -44,6 +46,7 @@ app.prepare().then(() => {
       extended: true,
     })
   )
+  server.use(bodyParser.json())
   server.use(
     session({
       secret: 'session_secret_shh', // Change for production apps
@@ -68,6 +71,15 @@ app.prepare().then(() => {
       res.redirect('/')
     }
   )
+
+  server.get('/plan', (req, res) => {
+    res.send(savedPlan)
+  })
+
+  server.post('/plan', (req, res) => {
+    savedPlan = req.body
+    res.send('ok')
+  })
 
   server.get('*', (req, res) => {
     return handle(req, res)

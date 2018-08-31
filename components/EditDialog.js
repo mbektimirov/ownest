@@ -15,7 +15,7 @@ import TextField from '@material-ui/core/TextField'
 import { withStyles } from '@material-ui/core/styles'
 import { Knob } from 'react-rotary-knob'
 import s12 from './knob-s12'
-// import cx from 'classnames'
+import cx from 'classnames'
 
 const Transition = (props) => <Slide direction="up" {...props} />
 
@@ -38,6 +38,10 @@ const styles = {
     marginBottom: 6,
     flexDirection: 'column',
   },
+  slideNew: {
+    background: '#3f51b552',
+    borderRadius: 4,
+  },
   actions: {
     display: 'flex',
     alignItems: 'center',
@@ -48,9 +52,9 @@ const styles = {
 
 class AlertDialogSlide extends React.Component {
   state = {
-    activeStep: 0,
     newTime: '',
     newTemp: 18,
+    activeStep: 0,
   }
 
   handleNext = () => {
@@ -69,11 +73,14 @@ class AlertDialogSlide extends React.Component {
     this.setState({ activeStep })
   }
 
-  renderInputs({ time, temp, onTimeChange, onTempChange }) {
+  renderInputs({ id, time, temp, onTimeChange, onTempChange }) {
     const { classes } = this.props
 
     return (
-      <div className={classes.slide}>
+      <div
+        className={cx(classes.slide, { [classes.slideNew]: !id })}
+        key={`${id || 'new'}-time`}
+      >
         <TextField
           type="time"
           value={time}
@@ -95,15 +102,34 @@ class AlertDialogSlide extends React.Component {
     )
   }
 
+  save() {
+    this.props.onTimeAdd({ time: this.state.newTime, temp: this.state.newTemp })
+    this.setState({ newTemp: 18, newTime: '' }) // reset to defaults
+    this.setState({ activeStep: this.props.times.length })
+  }
+
+  saveAndClose() {
+    this.save()
+    this.props.onClose()
+  }
+
   render() {
-    const { classes, open, thermostat, times, onTimeAdd, onClose } = this.props
+    const { classes, open, thermostat, times } = this.props
     const { activeStep, newTime, newTemp } = this.state
-    const newTimes = [...times, { time: newTime, temp: newTemp }]
-    const maxSteps = newTimes.length
-    const newInputHandlers = {
-      onTimeChange: (e) => this.setState({ newTime: e.target.value }),
-      onTempChange: (temp) => this.setState({ newTemp: Math.round(temp) }),
-    }
+    const timesSlides = times.map(({ id, time, temp }) =>
+      this.renderInputs({ id, time, temp })
+    )
+
+    timesSlides.push(
+      this.renderInputs({
+        time: newTime,
+        temp: newTemp,
+        onTimeChange: (e) => this.setState({ newTime: e.target.value }),
+        onTempChange: (temp) => this.setState({ newTemp: Math.round(temp) }),
+      })
+    )
+
+    const maxSteps = timesSlides.length
 
     console.log('DIALOG STATE', this.state)
 
@@ -113,6 +139,7 @@ class AlertDialogSlide extends React.Component {
         open={open}
         TransitionComponent={Transition}
         onClose={this.props.onClose}
+        onEntered={() => this.setState({ activeStep: times.length })}
         fullWidth
       >
         <DialogContent>
@@ -123,16 +150,10 @@ class AlertDialogSlide extends React.Component {
             enableMouseEvents
             style={{ width: '100%', height: '100%' }}
           >
-            {newTimes.map(({ id, time, temp }) =>
-              this.renderInputs({
-                time,
-                temp,
-                ...(id ? null : newInputHandlers),
-              })
-            )}
+            {timesSlides}
           </SwipeableViews>
 
-          {newTimes.length > 0 && (
+          {maxSteps > 0 && (
             <MobileStepper
               steps={maxSteps}
               position="static"
@@ -143,7 +164,7 @@ class AlertDialogSlide extends React.Component {
                   onClick={this.handleNext}
                   disabled={activeStep === maxSteps - 1}
                 >
-                  {newTimes[activeStep + 1] && newTimes[activeStep + 1].time}
+                  {times[activeStep + 1] && times[activeStep + 1].time}
                   <KeyboardArrowRight />
                 </Button>
               }
@@ -154,7 +175,7 @@ class AlertDialogSlide extends React.Component {
                   disabled={activeStep === 0}
                 >
                   <KeyboardArrowLeft />
-                  {newTimes[activeStep - 1] && newTimes[activeStep - 1].time}
+                  {times[activeStep - 1] && times[activeStep - 1].time}
                 </Button>
               }
             />
@@ -163,12 +184,21 @@ class AlertDialogSlide extends React.Component {
           <div className={classes.actions}>
             <Button
               size="small"
-              onClick={() => onTimeAdd({ time: newTime, temp: newTemp })}
+              onClick={() => {
+                this.saveAndClose()
+              }}
             >
               Save
             </Button>
             <Button size="small">Close</Button>
-            <Button size="small">Add more</Button>
+            <Button
+              size="small"
+              onClick={() => {
+                this.save()
+              }}
+            >
+              Add more
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

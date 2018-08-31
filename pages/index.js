@@ -8,9 +8,7 @@ import { withStyles } from '@material-ui/core/styles'
 import cx from 'classnames'
 import autobind from 'autobind-decorator'
 import get from 'lodash/get'
-import set from 'lodash/set'
 import values from 'lodash/values'
-import omitBy from 'lodash/omitBy'
 
 // material
 import Grid from '@material-ui/core/Grid'
@@ -108,15 +106,25 @@ const styles = (theme) => ({
   },
 })
 
+const localApi = new Api('', { withCredentials: false })
+
 const getTemp = (thermostat) =>
   thermostat.temperature_scale === 'F'
     ? thermostat.ambient_temperature_f
     : thermostat.ambient_temperature_c
 
+const strToMinutes = (str = '') => {
+  const [hours, mins] = str.split(':')
+
+  return Number(hours) * 60 + Number(mins)
+}
+
 class Index extends React.Component {
   static getInitialProps = async ({ req, res }) => {
     const cookies = new Cookies()
-    const token = req ? req.cookies.nest_token : cookies.get('nest_token')
+    const token = req
+      ? (req.cookies || {}).nest_token
+      : cookies.get('nest_token')
 
     if (!token) {
       if (res) {
@@ -130,11 +138,10 @@ class Index extends React.Component {
     }
 
     const api = new Api('https://developer-api.nest.com', { token })
-    const rootResult = await api.get('/')
-    const { thermostats } = rootResult.devices
+    const nestResult = await api.get('/')
+    const { thermostats } = nestResult.devices
 
     return {
-      api,
       thermostats,
       // keep ordered thermostats list to always set first of the items as active
       thermostatsList: Object.values(thermostats || {}),
@@ -149,16 +156,39 @@ class Index extends React.Component {
     editDialogOpen: false,
   }
 
-  get thPlan() {}
-
-  get weekDays() {
+  weekDays(listId) {
     const { classes } = this.props
+    const { plan, activeThId } = this.state
+    const list = get(this.state.plan, [activeThId, listId])
+    const { daysRepeat = [] } = list
 
-    return ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((weekDay) => (
-      <div className={cx(classes.weekDay /*classes.weekDayActive*/)}>
-        {weekDay}
-      </div>
-    ))
+    return ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((weekDay, i) => {
+      const onClick = () => {
+        if (daysRepeat && daysRepeat.indexOf(i) >= 0) {
+          list.daysRepeat = daysRepeat.filter((day) => day !== i)
+        } else {
+          list.daysRepeat = [...daysRepeat, i]
+        }
+
+        this.updatePlan(plan)
+      }
+
+      return (
+        <div
+          className={cx(classes.weekDay, {
+            [classes.weekDayActive]: daysRepeat.indexOf(i) >= 0,
+          })}
+          onClick={onClick}
+        >
+          {weekDay}
+        </div>
+      )
+    })
+  }
+
+  updatePlan(plan) {
+    this.setState({ plan })
+    localApi.post('/plan', plan)
   }
 
   addPlan() {
@@ -178,6 +208,14 @@ class Index extends React.Component {
     })
   }
 
+  deletePlan(listId) {
+    const { plan, activeThId } = this.state
+
+    delete plan[activeThId][listId]
+
+    this.updatePlan(plan)
+  }
+
   @autobind
   addTime(thId, listId, time, temp) {
     const { plan } = this.state
@@ -185,8 +223,9 @@ class Index extends React.Component {
     const id = guid()
 
     times.push({ id, time, temp })
+    times.sort((t1, t2) => strToMinutes(t1.time) > strToMinutes(t2.time))
 
-    this.setState({ plan })
+    this.updatePlan(plan)
   }
 
   addTimeToPlan(listId) {
@@ -204,6 +243,12 @@ class Index extends React.Component {
     }
 
     this.setState({ editDialogOpen: false, plan })
+  }
+
+  async componentDidMount() {
+    const plan = await localApi.get('/plan')
+
+    this.setState({ plan })
   }
 
   render() {
@@ -244,8 +289,8 @@ class Index extends React.Component {
           {values(plans).map((plan) => (
             <Paper className={classes.listWrapper}>
               <div className={classes.planList}>
-                {plan.times.map(({ time, temp }) => (
-                  <Thermostat name={time} temp={temp} paper small />
+                {plan.times.map(({ time, temp }, i) => (
+                  <Thermostat name={time} temp={temp} paper small key={i} />
                 ))}
                 <div className={classes.planActions}>
                   <Button
@@ -258,14 +303,17 @@ class Index extends React.Component {
                   >
                     <AddIcon />
                   </Button>
-                  <IconButton className={classes.button} aria-label="Delete">
+                  <IconButton
+                    className={classes.button}
+                    onClick={() => this.deletePlan(plan.id)}
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </div>
               </div>
               <div>
                 <span className={classes.repeatTitle}>Repeat:</span>
-                <div className={classes.weekDays}>{this.weekDays}</div>
+                <div className={classes.weekDays}>{this.weekDays(plan.id)}</div>
               </div>
             </Paper>
           ))}
@@ -281,18 +329,15 @@ class Index extends React.Component {
           <AddIcon />
         </Button>
 
-        {this.state.editDialogOpen && (
-          <EditDialog
-            open={this.state.editDialogOpen}
-            onClose={this.closeDialog}
-            onTimeAdd={({ time, temp }) => {
-              this.addTime(activeThId, activeListId, time, temp)
-              this.setState({ editDialogOpen: false })
-            }}
-            thermostat={this.state.activeTh}
-            times={times}
-          />
-        )}
+        <EditDialog
+          open={this.state.editDialogOpen}
+          onClose={this.closeDialog}
+          onTimeAdd={({ time, temp }) => {
+            this.addTime(activeThId, activeListId, time, temp)
+          }}
+          thermostat={this.state.activeTh}
+          times={times}
+        />
       </div>
     )
   }
